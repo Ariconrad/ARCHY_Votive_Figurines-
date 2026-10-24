@@ -1,0 +1,168 @@
+---
+title: "title"
+author: "Ariana Conrad"
+format: gfm
+---
+
+
+## Introduction
+Tutorial citation: 
+Sadler, J. (2026). Networks in R. Digital History Methods. https://jessesadler.github.io/vt5444s26/resources/networks.html
+
+Peer-reviewed archaeological publication:
+- Ostborn (2015) uses social analysis to examine the diffusion of fired bricks in Hellenistic Europe and found that there were cultural clusters
+-There was one or more causal processes responsible for the diffusion of fired bricks
+- Network analysis was used to prove whether the geographical distribution/diffusion was statistically significant, as well as to view the degree of homogenization
+
+## Tutorial
+
+```{r}
+library(igraph)
+library(tidygraph)
+library(ggraph)
+library(tidyverse)
+library(dplyr)
+
+#data frame of nodes
+tibble(id = 1:4)
+node_list <- tibble(id = 1:4,
+                    name = LETTERS[1:4],
+                    university = c("VT", "JMU", "UVA", "GMU"))
+
+#data frame of node pairs
+tibble(from = c(1, 2, 2, 3, 4),
+       to = c(2, 3, 4, 2, 1))
+edge_list <- tibble(from = c(1, 2, 2, 3, 4),
+                    to = c(2, 3, 4, 2, 1),
+                    type = c("History", "English", "Art History", "History", "English"))
+
+```
+
+The code chunk above loads in the packages that will be used and sets up a network type of data, which consists of two related structures: the edge list and the node list. The edge list consists of at least two columns that provide attributes to the edges. The node list includes all of the unique nodes in the graph.
+
+
+```{r}
+#Creating network objects
+
+#Create a tbl_graph with tidygraph
+tbl_graph(nodes = node_list, edges = edge_list, directed = FALSE)
+
+
+# Create an igraph object
+graph_from_data_frame(d = edge_list, vertices = node_list, directed = FALSE)
+
+
+#Create a tidygraph object through igraph
+network <- graph_from_data_frame(d = edge_list,
+                                 vertices = node_list,
+                                 directed = FALSE) |>
+  as_tbl_graph()
+
+```
+
+These are three different ways to create network objects, but "graph_from_data_frame" is better to use with larger graphs.The tbl_graph objects prints out as two data frames, but the igraph object gives an overview of the graph.
+
+
+```{r}
+#Summary of the graph
+
+# 1. Size
+gorder(network)
+
+# 2. Density (0-1)
+edge_density(network)
+
+# 3. Components: only one, all nodes have at least one edge
+count_components(network)
+
+# 4. Diameter
+diameter(network)
+
+# 5. Clustering coefficient (0-1)
+transitivity(network)
+
+```
+
+The code above shows what information can be retrieved from the graph as a summary. This summary describes the basic structure of the graph.
+
+
+```{r}
+#Calculate node properties
+
+network |> 
+  mutate(centrality = centrality_degree())
+
+network |>
+  activate(edges) |>
+  filter(type == "History")
+
+#Visualize the graph with ggraph
+
+set.seed(9528)
+
+ggraph(network, layout = "nicely") + 
+  geom_edge_link() + 
+  geom_node_point() + 
+  theme_graph()
+
+```
+
+Centrality_degree() is then used to calculate the degree and strength of the nodes, which is only one of the many possible ways of calculation to understand the nodes/edges. The activate() function alters the edge data. The data is then visualized with a graph style without a x-axis or y-axis.
+
+
+```{r}
+#Visualize the graph with igraph
+
+set.seed(5493)
+
+network |> 
+  mutate(centrality = centrality_degree()) |>
+  ggraph(layout = "kk") + 
+  geom_edge_link(aes(color = type),
+                 linewidth = 2) + 
+  geom_node_point(aes(size = centrality)) + 
+  geom_node_text(aes(label = university), repel = TRUE) + 
+  scale_edge_color_brewer(palette = "Dark2") + 
+  labs(size = "Degree Centrality",
+       edge_color = "Discipline") + 
+  theme_graph(base_size = 16)
+
+```
+
+Additional details are then added to the graph from the attribute data, which allows for scaling of the edges. This provides another example of how the data can be visualized.
+
+
+## How this method works
+
+1. Columns that provide attributes are included in the edge list and columns with unique nodes are added to the node list. Characteristics and properties of the nodes and edges may also be included.
+
+2. Network analysis examines the relationships between nodes (entities, e.g., an artifact) and edges (connections). There is a visual output of a network graph, as well as numeric metrics that help describe structure, connectivity, and importance.
+
+3. Network analysis used in this context would be considered unsupervised.
+
+4. The tutorial gather a 5 numeric summary of the graph before calculating the node properties and visualizing the graph.
+
+## My data
+
+```{r}
+readxl::read_excel("data/m_othering_14_04_2025.xlsx")
+glimpse(m_othering_14_04_2025)
+
+```
+
+There are 928 rows and 43 columns and one row of the dataset represents one archaeological site.
+
+For my dataset, the node list would include the settlement column that provides the location the artifacts were found and the edge list could include: the number of items, adults position, subadults position, breastfeeding, signs of care toward the subadult, body contact between adults and subadults, or the subadult clothes.
+
+
+## What would change for my archaeological data
+
+I would need to remove any data points that are NA. I hope removing any NA in the dataset would not removed too many rows. Without using AI, an archaeologist would take note of the features seen on the votive and examine how the features vary between different regions, as well as research whether the found differences relate to the culture of that area.
+
+
+## References
+
+Sadler, J. (2026). Networks in R. Digital History Methods. https://jessesadler.github.io/vt5444s26/resources/networks.html
+
+Ostborn, P., Gerding, H. (2015). The diffusion of fired bricks in Hellenistic Europe : a similarity network analysis. Journal of archaeological method and theory, 22(1), 306-344. 
+
